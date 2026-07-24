@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capricorn Bash — Trip Planner</title>
+<style>
+  :root{
+    --purple-dark:#2e1a47;
+    --purple:#4b2e83;
+    --purple-light:#7c5cbf;
+    --gold:#d4af37;
+    --gold-light:#f2d98b;
+    --bg:#f6f4fb;
+    --card:#ffffff;
+    --text:#2a2233;
+    --muted:#6b6178;
+    --border:#e3ddf0;
+    --green:#2e7d32;
+    --red:#c62828;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,var(--purple-dark) 0%, var(--bg) 260px);
+    color:var(--text);
+    padding-bottom:60px;
+  }
+  .container{max-width:1400px;margin:0 auto;padding:0 20px;}
+  header{padding:36px 20px 20px;text-align:center;color:#fff;}
+  header h1{margin:0 0 6px;font-size:2.2em;letter-spacing:.5px;}
+  header .subtitle{margin:0;color:var(--gold-light);font-size:1.05em;font-weight:500;}
+  header .datebar{margin-top:10px;color:#d8cdf0;font-size:.9em;}
+
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    box-shadow:0 6px 24px rgba(46,26,71,.12);
+    margin-bottom:22px;
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+
+  .settings-panel .card-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 22px;background:linear-gradient(90deg,var(--purple),var(--purple-light));
+    color:#fff;cursor:pointer;
+  }
+  .settings-panel .card-head h2{margin:0;font-size:1.05em;font-weight:600;}
+  .settings-panel .card-head .chev{transition:transform .2s;font-size:.8em;}
+  .settings-panel.collapsed .card-head .chev{transform:rotate(-90deg);}
+  .settings-panel.collapsed .settings-body{display:none;}
+
+  .settings-body{padding:20px 22px;}
+  .settings-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;
+  }
+  .settings-grid label{
+    display:flex;flex-direction:column;gap:6px;
+    font-size:.82em;color:var(--muted);font-weight:600;
+    text-transform:uppercase;letter-spacing:.03em;
+  }
+  .settings-grid input{
+    font-size:1em;padding:9px 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;color:var(--text);
+  }
+  .settings-grid input:focus{outline:2px solid var(--purple-light);outline-offset:1px;}
+
+  .table-section{padding:20px 22px 22px;}
+  .table-section h2{margin:0 0 14px;font-size:1.1em;color:var(--purple-dark);}
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+  table{border-collapse:collapse;width:100%;min-width:1500px;font-size:.88em;}
+  thead th{
+    background:var(--purple-dark);color:#fff;font-weight:600;
+    padding:10px 8px;text-align:center;white-space:nowrap;position:sticky;top:0;
+  }
+  thead th.col-name{text-align:left;min-width:130px;}
+  tbody td{padding:6px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
+  tbody tr:hover{background:#faf8ff;}
+  tbody td.col-name{text-align:left;}
+  tbody input, tbody select{
+    width:100%;padding:6px 6px;border:1px solid var(--border);border-radius:6px;
+    font-family:inherit;font-size:.95em;text-align:center;color:var(--text);
+  }
+  tbody td.col-name input{text-align:left;min-width:110px;}
+  tbody input[type="number"]{min-width:56px;}
+  td.calc{font-weight:700;color:var(--purple-dark);background:#faf7ff;}
+  td.total-cell{font-weight:800;color:var(--purple-dark);background:#f1ebfb;}
+  td.balance-pos{color:var(--red);font-weight:700;}
+  td.balance-zero{color:var(--green);font-weight:700;}
+  .del-btn{
+    background:none;border:none;color:#b71c1c;font-size:1.1em;cursor:pointer;
+    padding:2px 6px;border-radius:6px;
+  }
+  .del-btn:hover{background:#fde8e8;}
+
+  tfoot td{
+    padding:10px 6px;font-weight:800;background:var(--purple-dark);color:#fff;
+    text-align:center;position:sticky;bottom:0;
+  }
+  tfoot td.col-name{text-align:left;}
+
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+  button.btn{
+    border:none;border-radius:8px;padding:10px 16px;font-size:.9em;font-weight:600;
+    cursor:pointer;transition:transform .1s, box-shadow .1s;
+  }
+  button.btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--gold);color:var(--purple-dark);}
+  .btn-primary:hover{box-shadow:0 4px 10px rgba(212,175,55,.4);}
+  .btn-secondary{background:var(--purple-light);color:#fff;}
+  .btn-secondary:hover{box-shadow:0 4px 10px rgba(124,92,191,.35);}
+  .btn-outline{background:#fff;color:var(--purple);border:1px solid var(--purple-light);}
+  .btn-outline:hover{background:#f4effc;}
+  .btn-danger{background:#fff;color:var(--red);border:1px solid #f0c4c4;}
+  .btn-danger:hover{background:#fdecec;}
+
+  .summary-strip{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;
+    padding:20px 22px;
+  }
+  .summary-card{
+    background:linear-gradient(135deg,var(--purple),var(--purple-dark));
+    color:#fff;border-radius:12px;padding:16px;text-align:center;
+  }
+  .summary-card .val{font-size:1.5em;font-weight:800;color:var(--gold-light);}
+  .summary-card .lbl{font-size:.78em;text-transform:uppercase;letter-spacing:.04em;color:#d8cdf0;margin-top:4px;}
+
+  .footnote{text-align:center;color:var(--muted);font-size:.8em;margin-top:18px;}
+  .save-status{text-align:center;color:#d8cdf0;font-size:.78em;margin-top:6px;min-height:16px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>♑ Capricorn Bash</h1>
+  <p class="subtitle">Room · Deposit · Buffet · Golf Planner</p>
+  <p class="datebar" id="dateBar"></p>
+</header>
+
+<div class="container">
+
+  <div class="card settings-panel" id="settingsPanel">
+    <div class="card-head" id="settingsToggle">
+      <h2>Rates &amp; Settings</h2>
+      <span class="chev">▾</span>
+    </div>
+    <div class="settings-body">
+      <div class="settings-grid">
+        <label>Single Room ($ / night)
+          <input type="number" id="rateSGL" value="0" min="0" step="0.01">
+        </label>
+        <label>Double Room ($ / night)
+          <input type="number" id="rateDBL" value="0" min="0" step="0.01">
+        </label>
+        <label>Buffet ($ / person)
+          <input type="number" id="rateBuffet" value="0" min="0" step="0.01">
+        </label>
+        <label>Initial Room Deposit ($ / room)
+          <input type="number" id="rateDeposit" value="0" min="0" step="0.01">
+        </label>
+        <label>Golf Green Fee ($ / golfer)
+          <input type="number" id="rateGolf" value="0" min="0" step="0.01">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card summary-strip" id="summaryStrip"></div>
+
+  <div class="card table-section">
+    <h2>Guest Roster</h2>
+    <div class="table-wrap">
+      <table id="guestTable">
+        <thead>
+          <tr>
+            <th class="col-name">Name</th>
+            <th>Party Size</th>
+            <th>Room Type</th>
+            <th>Nights</th>
+            <th>Room Cost</th>
+            <th>Initial Room Deposit</th>
+            <th>Buffet Guests</th>
+            <th>Buffet Cost</th>
+            <th>Birthday Participants</th>
+            <th>Birthday Cost</th>
+            <th>Golfers</th>
+            <th>Non-Golfers</th>
+            <th>Golf Cost</th>
+            <th>Total Cost</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="guestBody"></tbody>
+        <tfoot id="guestFoot"></tfoot>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="addRow">+ Add Guest</button>
+      <button class="btn btn-secondary" id="exportCsv">Export CSV</button>
+      <button class="btn btn-outline" id="applyRates">Apply Rates to All Rows</button>
+      <button class="btn btn-outline" id="resetData">Reset to Trip Defaults</button>
+      <button class="btn btn-danger" id="clearAll">Clear All</button>
+    </div>
+    <p class="save-status" id="saveStatus"></p>
+  </div>
+
+  <p class="footnote">All data is saved automatically in this browser (nothing is uploaded anywhere). Use "Export CSV" to back up or share the roster.</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "capricornBashPlanner_v1";
+
+  var DEFAULT_RATES = { sgl: 0, dbl: 0, buffet: 0, deposit: 0, golf: 0 };
+
+  var DEFAULT_GUESTS = [
+    { name:"Elmore R.", party:2, roomType:"DBL", nights:5, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Sue/Mark",  party:2, roomType:"DBL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Willis",    party:2, roomType:"DBL", nights:5, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"McCrays",   party:2, roomType:"SGL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Davis",     party:2, roomType:"DBL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Williams",  party:2, roomType:"DBL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Elmore K.", party:2, roomType:"DBL", nights:5, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Hughes",    party:2, roomType:"DBL", nights:5, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Dave S.",   party:1, roomType:"DBL", nights:3, buffet:1, bday:1, golfers:0, nonGolfers:1, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Carl B.",   party:2, roomType:"SGL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Tim G.",    party:1, roomType:"DBL", nights:3, buffet:1, bday:1, golfers:0, nonGolfers:1, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 },
+    { name:"Murdock",   party:2, roomType:"SGL", nights:3, buffet:2, bday:2, golfers:0, nonGolfers:2, paid:0, notes:"", roomCost:0, depositCost:0, buffetCost:0, birthdayCost:0, golfCost:0 }
+  ];
+
+  var state = { rates: null, guests: null, nextId: 1 };
+
+  function fresh(){
+    var guests = DEFAULT_GUESTS.map(function(g){
+      var row = Object.assign({}, g, { id: state.nextId++ });
+      return row;
+    });
+    return { rates: Object.assign({}, DEFAULT_RATES), guests: guests };
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && parsed.guests && parsed.rates){
+          state.rates = parsed.rates;
+          state.guests = parsed.guests;
+          state.nextId = parsed.nextId || (parsed.guests.length + 1);
+          migrateGuestCosts();
+          return;
+        }
+      }
+    }catch(e){}
+    var f = fresh();
+    state.rates = f.rates;
+    state.guests = f.guests;
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    var el = document.getElementById("saveStatus");
+    el.textContent = "Saved " + new Date().toLocaleTimeString();
+    clearTimeout(save._t);
+    save._t = setTimeout(function(){ el.textContent = ""; }, 2000);
+  }
+
+  function num(v){
+    var n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function money(n){
+    n = num(n);
+    var sign = n < 0 ? "-" : "";
+    return sign + "$" + Math.abs(n).toFixed(2);
+  }
+
+  // Every cost cell (Room Cost, Deposit, Buffet Cost, Birthday Cost, Golf Cost) is now
+  // a directly editable value stored on the guest. Total/Balance are still derived sums.
+  function computeGuest(g){
+    var total = num(g.roomCost) + num(g.depositCost) + num(g.buffetCost) + num(g.birthdayCost) + num(g.golfCost);
+    var balance = total - num(g.paid);
+    return { total:total, balance:balance };
+  }
+
+  // One-time migration for rosters saved before cost cells were editable: back-fill
+  // dollar values from the old rate x count formulas so existing data isn't lost.
+  function migrateGuestCosts(){
+    var r = state.rates || {};
+    state.guests.forEach(function(g){
+      if(g.roomCost === undefined){
+        var roomRate = g.roomType === "SGL" ? num(r.sgl) : num(r.dbl);
+        g.roomCost = roomRate * num(g.nights);
+      }
+      if(g.depositCost === undefined) g.depositCost = num(r.deposit);
+      if(g.buffetCost === undefined) g.buffetCost = num(r.buffet) * num(g.buffet);
+      if(g.birthdayCost === undefined) g.birthdayCost = num(g.bday) * num(r.bday || 0);
+      if(g.golfCost === undefined) g.golfCost = num(r.golf) * num(g.golfers);
+    });
+  }
+
+  function fieldNum(id, field, opts){
+    opts = opts || {};
+    return '<input type="number" min="0" step="'+(opts.step||1)+'" data-id="'+id+'" data-field="'+field+'" value="'+opts.value+'">';
+  }
+
+  function renderRates(){
+    document.getElementById("rateSGL").value = state.rates.sgl;
+    document.getElementById("rateDBL").value = state.rates.dbl;
+    document.getElementById("rateBuffet").value = state.rates.buffet;
+    document.getElementById("rateDeposit").value = state.rates.deposit;
+    document.getElementById("rateGolf").value = state.rates.golf;
+    // birthday rate reuses a hidden concept: store on rates.bday
+    if(state.rates.bday === undefined) state.rates.bday = 0;
+  }
+
+  function render(){
+    var tbody = document.getElementById("guestBody");
+    tbody.innerHTML = "";
+    var totals = { room:0, deposit:0, buffet:0, bday:0, golf:0, total:0, paid:0, balance:0,
+                   party:0, buffetG:0, bdayG:0, golfers:0, nonGolfers:0 };
+
+    state.guests.forEach(function(g){
+      var c = computeGuest(g);
+      totals.room += num(g.roomCost);
+      totals.deposit += num(g.depositCost);
+      totals.buffet += num(g.buffetCost);
+      totals.bday += num(g.birthdayCost);
+      totals.golf += num(g.golfCost);
+      totals.total += c.total;
+      totals.paid += num(g.paid);
+      totals.balance += c.balance;
+      totals.party += num(g.party);
+      totals.buffetG += num(g.buffet);
+      totals.bdayG += num(g.bday);
+      totals.golfers += num(g.golfers);
+      totals.nonGolfers += num(g.nonGolfers);
+
+      var tr = document.createElement("tr");
+      var balClass = c.balance > 0.004 ? "balance-pos" : "balance-zero";
+
+      tr.innerHTML =
+        '<td class="col-name"><input type="text" data-id="'+g.id+'" data-field="name" value="'+escapeAttr(g.name)+'"></td>' +
+        '<td>'+fieldNum(g.id,"party",{value:g.party})+'</td>' +
+        '<td><select data-id="'+g.id+'" data-field="roomType">' +
+          '<option value="SGL"'+(g.roomType==="SGL"?" selected":"")+'>SGL</option>' +
+          '<option value="DBL"'+(g.roomType==="DBL"?" selected":"")+'>DBL</option>' +
+        '</select></td>' +
+        '<td>'+fieldNum(g.id,"nights",{value:g.nights})+'</td>' +
+        '<td>'+fieldNum(g.id,"roomCost",{value:g.roomCost, step:0.01})+'</td>' +
+        '<td>'+fieldNum(g.id,"depositCost",{value:g.depositCost, step:0.01})+'</td>' +
+        '<td>'+fieldNum(g.id,"buffet",{value:g.buffet})+'</td>' +
+        '<td>'+fieldNum(g.id,"buffetCost",{value:g.buffetCost, step:0.01})+'</td>' +
+        '<td>'+fieldNum(g.id,"bday",{value:g.bday})+'</td>' +
+        '<td>'+fieldNum(g.id,"birthdayCost",{value:g.birthdayCost, step:0.01})+'</td>' +
+        '<td>'+fieldNum(g.id,"golfers",{value:g.golfers})+'</td>' +
+        '<td>'+fieldNum(g.id,"nonGolfers",{value:g.nonGolfers})+'</td>' +
+        '<td>'+fieldNum(g.id,"golfCost",{value:g.golfCost, step:0.01})+'</td>' +
+        '<td class="total-cell">'+money(c.total)+'</td>' +
+        '<td>'+fieldNum(g.id,"paid",{value:g.paid, step:0.01})+'</td>' +
+        '<td class="'+balClass+'">'+money(c.balance)+'</td>' +
+        '<td><input type="text" data-id="'+g.id+'" data-field="notes" value="'+escapeAttr(g.notes||"")+'" placeholder="—"></td>' +
+        '<td><button class="del-btn" data-del="'+g.id+'" title="Remove guest">✕</button></td>';
+
+      tbody.appendChild(tr);
+    });
+
+    var tfoot = document.getElementById("guestFoot");
+    tfoot.innerHTML =
+      '<tr>' +
+        '<td class="col-name">TOTALS</td>' +
+        '<td>'+totals.party+'</td>' +
+        '<td>—</td>' +
+        '<td>—</td>' +
+        '<td>'+money(totals.room)+'</td>' +
+        '<td>'+money(totals.deposit)+'</td>' +
+        '<td>'+totals.buffetG+'</td>' +
+        '<td>'+money(totals.buffet)+'</td>' +
+        '<td>'+totals.bdayG+'</td>' +
+        '<td>'+money(totals.bday)+'</td>' +
+        '<td>'+totals.golfers+'</td>' +
+        '<td>'+totals.nonGolfers+'</td>' +
+        '<td>'+money(totals.golf)+'</td>' +
+        '<td>'+money(totals.total)+'</td>' +
+        '<td>'+money(totals.paid)+'</td>' +
+        '<td>'+money(totals.balance)+'</td>' +
+        '<td>—</td><td></td>' +
+      '</tr>';
+
+    renderSummary(totals);
+  }
+
+  function renderSummary(totals){
+    var strip = document.getElementById("summaryStrip");
+    var cards = [
+      { val: state.guests.length, lbl: "Rooms / Bookings" },
+      { val: totals.party, lbl: "Total Guests" },
+      { val: totals.golfers, lbl: "Golfers" },
+      { val: totals.nonGolfers, lbl: "Non-Golfers" },
+      { val: money(totals.total), lbl: "Total Trip Cost" },
+      { val: money(totals.paid), lbl: "Total Paid" },
+      { val: money(totals.balance), lbl: "Balance Due" }
+    ];
+    strip.innerHTML = cards.map(function(c){
+      return '<div class="summary-card"><div class="val">'+c.val+'</div><div class="lbl">'+c.lbl+'</div></div>';
+    }).join("");
+  }
+
+  function escapeAttr(s){
+    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function findGuest(id){
+    id = String(id);
+    for(var i=0;i<state.guests.length;i++){
+      if(String(state.guests[i].id) === id) return state.guests[i];
+    }
+    return null;
+  }
+
+  // Event delegation for table inputs
+  document.getElementById("guestBody").addEventListener("input", function(e){
+    var t = e.target;
+    var id = t.getAttribute("data-id");
+    var field = t.getAttribute("data-field");
+    if(!id || !field) return;
+    var g = findGuest(id);
+    if(!g) return;
+    if(t.tagName === "SELECT"){
+      g[field] = t.value;
+    } else if(t.type === "number"){
+      g[field] = t.value === "" ? 0 : parseFloat(t.value);
+    } else {
+      g[field] = t.value;
+    }
+    // re-render calc cells only (simplify by full render, cheap for small rosters)
+    var activeId = document.activeElement ? document.activeElement.getAttribute("data-id") : null;
+    var activeField = document.activeElement ? document.activeElement.getAttribute("data-field") : null;
+    render();
+    save();
+    // restore focus
+    if(activeId && activeField){
+      var sel = '[data-id="'+activeId+'"][data-field="'+activeField+'"]';
+      var el = document.querySelector(sel);
+      if(el){ el.focus(); if(el.setSelectionRange && el.type!=="number"){ try{ el.setSelectionRange(el.value.length, el.value.length);}catch(e){} } }
+    }
+  });
+
+  document.getElementById("guestBody").addEventListener("click", function(e){
+    var delId = e.target.getAttribute("data-del");
+    if(delId){
+      state.guests = state.guests.filter(function(g){ return String(g.id) !== String(delId); });
+      render();
+      save();
+    }
+  });
+
+  document.getElementById("addRow").addEventListener("click", function(){
+    state.guests.push({
+      id: state.nextId++, name:"New Guest", party:1, roomType:"DBL", nights:1,
+      buffet:1, bday:1, golfers:0, nonGolfers:1, paid:0, notes:"",
+      roomCost:0, depositCost: num(state.rates.deposit), buffetCost:0, birthdayCost:0, golfCost:0
+    });
+    render();
+    save();
+  });
+
+  document.getElementById("applyRates").addEventListener("click", function(){
+    if(!confirm("Recalculate every cost cell (Room, Deposit, Buffet, Birthday, Golf) from the current rates? This overwrites any manually edited cost values.")) return;
+    var r = state.rates;
+    state.guests.forEach(function(g){
+      var roomRate = g.roomType === "SGL" ? num(r.sgl) : num(r.dbl);
+      g.roomCost = roomRate * num(g.nights);
+      g.depositCost = num(r.deposit);
+      g.buffetCost = num(r.buffet) * num(g.buffet);
+      g.birthdayCost = num(g.bday) * num(r.bday || 0);
+      g.golfCost = num(r.golf) * num(g.golfers);
+    });
+    render();
+    save();
+  });
+
+  document.getElementById("resetData").addEventListener("click", function(){
+    if(!confirm("Reset roster to the original 12-guest trip list? Your custom rows and edits will be lost (rates are kept).")) return;
+    var f = fresh();
+    var keepRates = state.rates;
+    state.guests = f.guests;
+    state.rates = keepRates;
+    render();
+    save();
+  });
+
+  document.getElementById("clearAll").addEventListener("click", function(){
+    if(!confirm("Clear ALL guests and reset rates to zero? This cannot be undone.")) return;
+    state.rates = Object.assign({}, DEFAULT_RATES);
+    state.guests = [];
+    renderRates();
+    render();
+    save();
+  });
+
+  ["rateSGL","rateDBL","rateBuffet","rateDeposit","rateGolf"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", function(){
+      state.rates.sgl = num(document.getElementById("rateSGL").value);
+      state.rates.dbl = num(document.getElementById("rateDBL").value);
+      state.rates.buffet = num(document.getElementById("rateBuffet").value);
+      state.rates.deposit = num(document.getElementById("rateDeposit").value);
+      state.rates.golf = num(document.getElementById("rateGolf").value);
+      render();
+      save();
+    });
+  });
+
+  document.getElementById("settingsToggle").addEventListener("click", function(){
+    document.getElementById("settingsPanel").classList.toggle("collapsed");
+  });
+
+  document.getElementById("exportCsv").addEventListener("click", function(){
+    var headers = ["Name","Party Size","Room Type","Nights","Room Cost","Initial Room Deposit",
+      "Buffet Guests","Buffet Cost","Birthday Participants","Birthday Cost","Golfers","Non-Golfers",
+      "Golf Cost","Total Cost","Paid","Balance","Notes"];
+    var rows = [headers.join(",")];
+    state.guests.forEach(function(g){
+      var c = computeGuest(g);
+      var row = [g.name, g.party, g.roomType, g.nights, num(g.roomCost).toFixed(2), num(g.depositCost).toFixed(2),
+        g.buffet, num(g.buffetCost).toFixed(2), g.bday, num(g.birthdayCost).toFixed(2), g.golfers, g.nonGolfers,
+        num(g.golfCost).toFixed(2), c.total.toFixed(2), num(g.paid).toFixed(2), c.balance.toFixed(2), g.notes||""];
+      rows.push(row.map(function(v){
+        var s = String(v);
+        if(s.indexOf(",")>-1 || s.indexOf('"')>-1){ s = '"'+s.replace(/"/g,'""')+'"'; }
+        return s;
+      }).join(","));
+    });
+    var blob = new Blob([rows.join("\n")], { type:"text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "capricorn_bash_roster.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Birthday rate isn't in the static settings markup, so add its input field at load time:
+  function ensureBirthdayRateInput(){
+    var grid = document.querySelector(".settings-grid");
+    var label = document.createElement("label");
+    label.innerHTML = 'Birthday Fee ($ / person) <input type="number" id="rateBday" min="0" step="0.01" value="'+(state.rates.bday||0)+'">';
+    grid.appendChild(label);
+    document.getElementById("rateBday").addEventListener("input", function(){
+      state.rates.bday = num(this.value);
+      render();
+      save();
+    });
+  }
+
+  function init(){
+    load();
+    if(state.rates.bday === undefined) state.rates.bday = 0;
+    renderRates();
+    ensureBirthdayRateInput();
+    render();
+    var d = new Date();
+    document.getElementById("dateBar").textContent = "Plan updated " + d.toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
